@@ -1,15 +1,13 @@
-package com.gdufe.readingonline.service.impl;
+package com.gdufe.readingonline.service.excelUploadAndPrase.impl;
 
-import com.gdufe.readingonline.service.ExcelParseService;
-import com.gdufe.readingonline.service.ExcelUploadService;
+import com.gdufe.readingonline.service.excelUploadAndPrase.ExcelUploadService;
+import com.gdufe.readingonline.service.excelUploadAndPrase.ExcelParseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Excel文件处理服务实现类
@@ -31,8 +29,9 @@ public class ExcelUploadServiceImpl implements ExcelUploadService {
         try {
             // 验证文件
             if (!validateExcelFile(excelFile)) {
-                result.put("success", false);
+                result.put("code", 400);
                 result.put("message", "文件验证失败");
+                result.put("finishedCount", 0);
                 return result;
             }
             
@@ -40,26 +39,21 @@ public class ExcelUploadServiceImpl implements ExcelUploadService {
             ExcelParseService.ParseResult parseResult = excelParseService.parseAndImportExcel(excelFile, fileSource);
             
             if (parseResult.isSuccess()) {
-                result.put("success", true);
-                result.put("message", parseResult.getMessage());
-                result.put("fileId", UUID.randomUUID().toString());
-                result.put("fileName", fileName);
-                result.put("fileSize", fileSize);
-                result.put("fileSource", fileSource);
-                result.put("uploadTime", LocalDateTime.now());
-                result.put("totalRows", parseResult.getTotalRows());
-                result.put("insertedRows", parseResult.getInsertedRows());
-                result.put("skippedRows", parseResult.getSkippedRows());
+                result.put("code", 200);
+                result.put("message", "excel解析并导入成功");
+                result.put("finishedCount", parseResult.getInsertedRows());
             } else {
-                result.put("success", false);
-                result.put("message", parseResult.getMessage());
+                result.put("code", 500);
+                result.put("message", "excel解析成功但导入失败");
+                result.put("finishedCount", 0);
             }
             
             return result;
             
         } catch (Exception e) {
-            result.put("success", false);
+            result.put("code", 500);
             result.put("message", "文件处理失败：" + e.getMessage());
+            result.put("finishedCount", 0);
             return result;
         }
     }
