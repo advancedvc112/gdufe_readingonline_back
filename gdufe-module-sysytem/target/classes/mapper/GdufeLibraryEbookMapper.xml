@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gdufe.readingonline.dal.mysqlmapper.GdufeLibraryEbookMapper">
+
+    <!-- 批量插入电子书数据 -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO gdufe_library_ebook (
+            book_name, book_ISBN, book_author, book_press, book_publication_time,
+            book_url, book_brief_introduction, book_chinese_library_classification,
+            book_subject_classification, book_primary_classification, book_secondary_classification,
+            book_picture_url, book_source, is_deleted, create_time, update_time
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.bookName}, #{item.bookIsbn}, #{item.bookAuthor}, #{item.bookPress},
+                #{item.bookPublicationTime}, #{item.bookUrl}, #{item.bookBriefIntroduction},
+                #{item.bookChineseLibraryClassification}, #{item.bookSubjectClassification},
+                #{item.bookPrimaryClassification}, #{item.bookSecondaryClassification},
+                #{item.bookPictureUrl}, #{item.bookSource}, #{item.isDeleted},
+                #{item.createTime}, #{item.updateTime}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 根据ISBN查询电子书 -->
+    <select id="selectByBookIsbn" parameterType="java.lang.String" resultType="com.gdufe.readingonline.dal.dataobject.GdufeLibraryEbookDO">
+        SELECT * FROM gdufe_library_ebook WHERE book_ISBN = #{bookIsbn} AND is_deleted = 0
+    </select>
+
+</mapper>
