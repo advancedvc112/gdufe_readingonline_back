@@ -11,8 +11,8 @@ import java.util.Map;
 /**
  * 图书搜索管理Controller
  * 
- * @author gdufe
- * @date 2024
+ * @author gdufe-advancedvc112
+ * @date 2025
  */
 @RestController
 @RequestMapping("/gdufeReadingOnline/search/books")
