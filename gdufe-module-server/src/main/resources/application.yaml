@@ -1,5 +1,11 @@
 server:
   port: 8081
+  tomcat:
+    max-http-post-size: 200MB        # Tomcat POST请求最大大小
+    max-http-form-post-size: 200MB   # Tomcat表单POST请求最大大小
+    max-connections: 8192            # 最大连接数
+    accept-count: 100                # 等待队列长度
+    connection-timeout: 20000        # 连接超时时间（毫秒）
 
 spring:
   application:
@@ -9,6 +15,13 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/gdufe_readingonline?useSSL=false&serverTimezone=UTC
     username: root
     password: root
+  servlet:
+    multipart:
+      max-file-size: 200MB          # 单个文件最大大小
+      max-request-size: 200MB       # 整个请求最大大小
+      enabled: true                 # 启用文件上传
+      file-size-threshold: 0        # 设置为0，所有文件保存在内存中，不写入临时文件
+      # 不设置location，避免创建临时文件
 
 mybatis-plus:
   type-aliases-package: com.gdufe.readingonline.dal.dataobject # 别名扫描包
