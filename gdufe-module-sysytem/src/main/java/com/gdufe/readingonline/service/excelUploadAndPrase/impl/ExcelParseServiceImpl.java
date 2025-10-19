@@ -21,6 +21,39 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Excel解析结果封装类
+ */
+class ExcelParseResult {
+    private List<GdufeLibraryEbookDO> ebookList;
+    private int totalRows;
+    private int successCount;
+    private int failureCount;
+    
+    public ExcelParseResult(List<GdufeLibraryEbookDO> ebookList, int totalRows, int successCount, int failureCount) {
+        this.ebookList = ebookList;
+        this.totalRows = totalRows;
+        this.successCount = successCount;
+        this.failureCount = failureCount;
+    }
+    
+    public List<GdufeLibraryEbookDO> getEbookList() {
+        return ebookList;
+    }
+    
+    public int getTotalRows() {
+        return totalRows;
+    }
+    
+    public int getSuccessCount() {
+        return successCount;
+    }
+    
+    public int getFailureCount() {
+        return failureCount;
+    }
+}
+
+/**
  * Excel解析和数据库导入服务实现类
  * 
  * @author gdufe
@@ -46,24 +79,29 @@ public class ExcelParseServiceImpl implements ExcelParseService {
         
         try {
             // 根据文件来源选择不同的解析方法
-            List<GdufeLibraryEbookDO> ebookList;
+            ExcelParseResult parseResult;
             if ("0".equals(fileSource) || "changxiang".equalsIgnoreCase(fileSource)) {
                 // 畅想之星
-                ebookList = parseChangxiangExcelFile(excelFile);
+                parseResult = parseChangxiangExcelFile(excelFile);
             } else if ("1".equals(fileSource) || "jingdong".equalsIgnoreCase(fileSource)) {
                 // 京东
-                ebookList = parseJingdongExcelFile(excelFile);
+                parseResult = parseJingdongExcelFile(excelFile);
             } else {
                 result.setSuccess(false);
                 result.setMessage("不支持的文件来源：" + fileSource);
                 return result;
             }
             
+            List<GdufeLibraryEbookDO> ebookList = parseResult.getEbookList();
             if (ebookList == null || ebookList.isEmpty()) {
                 result.setSuccess(false);
                 result.setMessage("Excel文件中没有有效数据");
                 return result;
             }
+            
+            // 记录解析统计信息
+            logger.info("Excel解析统计 - 总行数：{}, 解析成功：{}, 解析失败：{}", 
+                parseResult.getTotalRows(), parseResult.getSuccessCount(), parseResult.getFailureCount());
             
             // 批量插入数据库
             int insertedCount = 0;
@@ -129,12 +167,13 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             
             result.setSuccess(true);
             result.setMessage("Excel文件解析并导入完成（基于ISBN进行插入或更新）");
-            result.setTotalRows(ebookList.size());
+            result.setTotalRows(parseResult.getTotalRows());
             result.setInsertedRows(insertedCount);
             result.setSkippedRows(skippedCount);
             
-            logger.info("Excel文件处理完成，总记录数：{}，成功处理：{}，跳过：{}", 
-                ebookList.size(), insertedCount, skippedCount);
+            logger.info("Excel文件处理完成 - 解析统计：总行数={}, 解析成功={}, 解析失败={}, 数据库操作：成功处理={}, 跳过={}", 
+                parseResult.getTotalRows(), parseResult.getSuccessCount(), parseResult.getFailureCount(), 
+                insertedCount, skippedCount);
             
         } catch (Exception e) {
             logger.error("Excel文件解析失败：{}", e.getMessage(), e);
@@ -150,10 +189,13 @@ public class ExcelParseServiceImpl implements ExcelParseService {
      * 解析畅想之星Excel文件
      * 
      * @param excelFile Excel文件
-     * @return 电子书数据列表
+     * @return 解析结果包含电子书数据列表和统计信息
      */
-    private List<GdufeLibraryEbookDO> parseChangxiangExcelFile(MultipartFile excelFile) {
+    private ExcelParseResult parseChangxiangExcelFile(MultipartFile excelFile) {
         List<GdufeLibraryEbookDO> ebookList = new ArrayList<>();
+        int totalRows = 0;
+        int successCount = 0;
+        int failureCount = 0;
         
         try {
             Workbook workbook;
@@ -178,26 +220,38 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             // 从第二行开始解析数据
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
-                if (row == null) continue;
+                if (row == null) {
+                    failureCount++;
+                    logger.warn("畅想之星解析失败 - 行号：{}, 原因：行为空", i + 1);
+                    continue;
+                }
+                
+                totalRows++;
                 
                 try {
                     GdufeLibraryEbookDO ebook = parseChangxiangRow(row, columnIndexMap);
                     if (ebook != null) {
                         ebookList.add(ebook);
+                        successCount++;
+                    } else {
+                        failureCount++;
+                        logger.warn("畅想之星解析失败 - 行号：{}, 原因：书名为空或必填字段缺失", i + 1);
                     }
                 } catch (Exception e) {
-                    logger.warn("解析畅想之星行数据失败：{}", e.getMessage());
-                    continue;
+                    failureCount++;
+                    logger.error("畅想之星解析失败 - 行号：{}, 原因：{}", i + 1, e.getMessage());
                 }
             }
             
             workbook.close();
             
         } catch (IOException e) {
-            logger.error("读取Excel文件失败：{}", e.getMessage(), e);
+            logger.error("读取畅想之星Excel文件失败：{}", e.getMessage(), e);
         }
         
-        return ebookList;
+        logger.info("畅想之星Excel解析完成 - 总行数：{}, 成功：{}, 失败：{}", totalRows, successCount, failureCount);
+        
+        return new ExcelParseResult(ebookList, totalRows, successCount, failureCount);
     }
     
     /**
@@ -477,8 +531,11 @@ public class ExcelParseServiceImpl implements ExcelParseService {
      * @return 解析后的电子书列表
      * @throws IOException IO异常
      */
-    private List<GdufeLibraryEbookDO> parseJingdongExcelFile(MultipartFile excelFile) throws IOException {
+    private ExcelParseResult parseJingdongExcelFile(MultipartFile excelFile) throws IOException {
         List<GdufeLibraryEbookDO> ebookList = new ArrayList<>();
+        int totalRows = 0;
+        int successCount = 0;
+        int failureCount = 0;
         
         Workbook workbook = null;
         try {
@@ -492,7 +549,8 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             
             Sheet sheet = workbook.getSheetAt(0);
             if (sheet == null) {
-                return ebookList;
+                logger.warn("京东Excel文件缺少工作表");
+                return new ExcelParseResult(ebookList, totalRows, successCount, failureCount);
             }
             
             // 解析标题行，获取列索引映射
@@ -507,12 +565,25 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) {
+                    failureCount++;
+                    logger.warn("京东解析失败 - 行号：{}, 原因：行为空", i + 1);
                     continue;
                 }
                 
-                GdufeLibraryEbookDO ebook = parseJingdongRow(row, columnIndexMap);
-                if (ebook != null) {
-                    ebookList.add(ebook);
+                totalRows++;
+                
+                try {
+                    GdufeLibraryEbookDO ebook = parseJingdongRow(row, columnIndexMap);
+                    if (ebook != null) {
+                        ebookList.add(ebook);
+                        successCount++;
+                    } else {
+                        failureCount++;
+                        logger.warn("京东解析失败 - 行号：{}, 原因：书名为空或必填字段缺失", i + 1);
+                    }
+                } catch (Exception e) {
+                    failureCount++;
+                    logger.error("京东解析失败 - 行号：{}, 原因：{}", i + 1, e.getMessage());
                 }
             }
             
@@ -522,7 +593,9 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             }
         }
         
-        return ebookList;
+        logger.info("京东Excel解析完成 - 总行数：{}, 成功：{}, 失败：{}", totalRows, successCount, failureCount);
+        
+        return new ExcelParseResult(ebookList, totalRows, successCount, failureCount);
     }
     
     /**
