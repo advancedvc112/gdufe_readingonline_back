@@ -59,11 +59,17 @@ public class ExcelUploadController {
             Map<String, Object> result = excelUploadService.processExcelUpload(
                 excelFile, fileName, fileSize, fileSource);
             
-            Boolean success = (Boolean) result.get("success");
-            if (success != null && success) {
+            // 检查Service层返回的code字段
+            Integer code = (Integer) result.get("code");
+            if (code != null && code == 200) {
                 return ResponseEntity.ok(result);
             } else {
-                return ResponseEntity.badRequest().body(result);
+                // 根据不同的错误码返回不同的HTTP状态码
+                if (code != null && code == 400) {
+                    return ResponseEntity.badRequest().body(result);
+                } else {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+                }
             }
             
         } catch (Exception e) {
