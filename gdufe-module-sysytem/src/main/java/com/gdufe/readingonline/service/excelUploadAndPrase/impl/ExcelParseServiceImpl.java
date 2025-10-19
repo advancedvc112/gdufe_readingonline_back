@@ -9,6 +9,8 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -26,6 +28,8 @@ import java.util.Map;
  */
 @Service
 public class ExcelParseServiceImpl implements ExcelParseService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(ExcelParseServiceImpl.class);
     
     @Autowired
     private GdufeLibraryEbookMapper ebookMapper;
@@ -76,6 +80,9 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             // 分批处理，每批5000条记录
             int batchSize = 5000;
             int totalSize = ebookList.size();
+            int totalBatches = (totalSize + batchSize - 1) / batchSize; // 计算总批次数
+            
+            logger.info("开始批量处理Excel数据，总记录数：{}，批次大小：{}，总批次数：{}", totalSize, batchSize, totalBatches);
             
             for (int i = 0; i < totalSize; i += batchSize) {
                 int endIndex = Math.min(i + batchSize, totalSize);
@@ -86,10 +93,12 @@ public class ExcelParseServiceImpl implements ExcelParseService {
                     int batchProcessed = ebookMapper.batchInsertOrUpdate(batch);
                     insertedCount += batchProcessed;
                     
-                    System.out.println("批量处理第 " + (i/batchSize + 1) + " 批，处理 " + batchProcessed + " 条记录（插入或更新）");
+                    // 成功时只显示批次信息，不显示每条详细记录
+                    logger.info("批量处理第 {} 批成功，处理 {} 条记录（插入或更新）", (i/batchSize + 1), batchProcessed);
                     
                 } catch (Exception e) {
-                    System.err.println("批量插入或更新第 " + (i/batchSize + 1) + " 批失败：" + e.getMessage());
+                    // 失败时显示详细错误信息
+                    logger.error("批量插入或更新第 {} 批失败，批次大小：{}，错误详情：{}", (i/batchSize + 1), batch.size(), e.getMessage(), e);
                     
                     // 如果批量操作失败，尝试逐条插入或更新
                     for (GdufeLibraryEbookDO ebook : batch) {
@@ -101,15 +110,17 @@ public class ExcelParseServiceImpl implements ExcelParseService {
                                 ebook.setId(existingEbook.getId());
                                 ebook.setCreateTime(existingEbook.getCreateTime()); // 保持原创建时间
                                 ebookMapper.updateById(ebook);
-                                System.out.println("更新记录：ISBN=" + ebook.getBookIsbn() + ", 书名=" + ebook.getBookName());
+                                // 成功时不显示详细记录
                             } else {
                                 // 不存在则插入
                                 ebookMapper.insert(ebook);
-                                System.out.println("插入记录：ISBN=" + ebook.getBookIsbn() + ", 书名=" + ebook.getBookName());
+                                // 成功时不显示详细记录
                             }
                             insertedCount++;
                         } catch (Exception ex) {
-                            System.err.println("单条处理失败：ISBN=" + ebook.getBookIsbn() + ", 错误=" + ex.getMessage());
+                            // 失败时显示详细错误信息
+                            logger.error("单条处理失败：ISBN={}, 书名={}, 错误详情：{}", 
+                                ebook.getBookIsbn(), ebook.getBookName(), ex.getMessage(), ex);
                             skippedCount++;
                         }
                     }
@@ -122,7 +133,11 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             result.setInsertedRows(insertedCount);
             result.setSkippedRows(skippedCount);
             
+            logger.info("Excel文件处理完成，总记录数：{}，成功处理：{}，跳过：{}", 
+                ebookList.size(), insertedCount, skippedCount);
+            
         } catch (Exception e) {
+            logger.error("Excel文件解析失败：{}", e.getMessage(), e);
             result.setSuccess(false);
             result.setMessage("Excel文件解析失败：" + e.getMessage());
         }
@@ -171,7 +186,7 @@ public class ExcelParseServiceImpl implements ExcelParseService {
                         ebookList.add(ebook);
                     }
                 } catch (Exception e) {
-                    System.err.println("解析畅想之星行数据失败：" + e.getMessage());
+                    logger.warn("解析畅想之星行数据失败：{}", e.getMessage());
                     continue;
                 }
             }
@@ -179,7 +194,7 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             workbook.close();
             
         } catch (IOException e) {
-            System.err.println("读取Excel文件失败：" + e.getMessage());
+            logger.error("读取Excel文件失败：{}", e.getMessage(), e);
         }
         
         return ebookList;
@@ -383,7 +398,7 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             return ebook;
             
         } catch (Exception e) {
-            System.err.println("解析行数据异常：" + e.getMessage());
+            logger.warn("解析行数据异常：{}", e.getMessage());
             return null;
         }
     }
