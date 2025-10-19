@@ -30,7 +30,7 @@ public class BookSearchController {
      * @param size 每页大小
      * @return 搜索结果
      */
-    @PostMapping("/name")
+    @GetMapping("/name")
     public ResponseEntity<Map<String, Object>> searchBooksByName(
             @RequestParam("name") String name,
             @RequestParam(value = "page", defaultValue = "1") Integer page,
