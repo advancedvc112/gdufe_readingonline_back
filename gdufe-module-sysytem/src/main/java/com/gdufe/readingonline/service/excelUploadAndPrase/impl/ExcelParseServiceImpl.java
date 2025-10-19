@@ -65,29 +65,59 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             int insertedCount = 0;
             int skippedCount = 0;
             
+            // 设置公共字段
+            LocalDateTime now = LocalDateTime.now();
             for (GdufeLibraryEbookDO ebook : ebookList) {
+                ebook.setCreateTime(now);
+                ebook.setUpdateTime(now);
+                ebook.setIsDeleted(0); // 默认未删除
+            }
+            
+            // 分批处理，每批1000条记录
+            int batchSize = 1000;
+            int totalSize = ebookList.size();
+            
+            for (int i = 0; i < totalSize; i += batchSize) {
+                int endIndex = Math.min(i + batchSize, totalSize);
+                List<GdufeLibraryEbookDO> batch = ebookList.subList(i, endIndex);
+                
                 try {
-                    // 检查是否已存在（根据ISBN判断）
-                    if (ebook.getBookIsbn() != null && !ebook.getBookIsbn().trim().isEmpty()) {
-                        // 这里可以添加重复检查逻辑
-                        // 暂时直接插入
-                    }
+                    // 使用批量插入或更新（基于ISBN）
+                    int batchProcessed = ebookMapper.batchInsertOrUpdate(batch);
+                    insertedCount += batchProcessed;
                     
-                    ebook.setCreateTime(LocalDateTime.now());
-                    ebook.setUpdateTime(LocalDateTime.now());
-                    ebook.setIsDeleted(0); // 默认未删除
-                    
-                    ebookMapper.insert(ebook);
-                    insertedCount++;
+                    System.out.println("批量处理第 " + (i/batchSize + 1) + " 批，处理 " + batchProcessed + " 条记录（插入或更新）");
                     
                 } catch (Exception e) {
-                    System.err.println("插入数据失败：" + e.getMessage());
-                    skippedCount++;
+                    System.err.println("批量插入或更新第 " + (i/batchSize + 1) + " 批失败：" + e.getMessage());
+                    
+                    // 如果批量操作失败，尝试逐条插入或更新
+                    for (GdufeLibraryEbookDO ebook : batch) {
+                        try {
+                            // 先查询是否存在
+                            GdufeLibraryEbookDO existingEbook = ebookMapper.selectByBookIsbn(ebook.getBookIsbn());
+                            if (existingEbook != null) {
+                                // 存在则更新
+                                ebook.setId(existingEbook.getId());
+                                ebook.setCreateTime(existingEbook.getCreateTime()); // 保持原创建时间
+                                ebookMapper.updateById(ebook);
+                                System.out.println("更新记录：ISBN=" + ebook.getBookIsbn() + ", 书名=" + ebook.getBookName());
+                            } else {
+                                // 不存在则插入
+                                ebookMapper.insert(ebook);
+                                System.out.println("插入记录：ISBN=" + ebook.getBookIsbn() + ", 书名=" + ebook.getBookName());
+                            }
+                            insertedCount++;
+                        } catch (Exception ex) {
+                            System.err.println("单条处理失败：ISBN=" + ebook.getBookIsbn() + ", 错误=" + ex.getMessage());
+                            skippedCount++;
+                        }
+                    }
                 }
             }
             
             result.setSuccess(true);
-            result.setMessage("Excel文件解析并导入完成");
+            result.setMessage("Excel文件解析并导入完成（基于ISBN进行插入或更新）");
             result.setTotalRows(ebookList.size());
             result.setInsertedRows(insertedCount);
             result.setSkippedRows(skippedCount);

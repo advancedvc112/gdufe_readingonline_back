@@ -2,8 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.gdufe.readingonline.dal.mysqlmapper.GdufeLibraryEbookMapper">
 
-    <!-- 批量插入电子书数据 -->
-    <insert id="batchInsert" parameterType="java.util.List">
+    <!-- 根据ISBN查询电子书 -->
+    <select id="selectByBookIsbn" parameterType="java.lang.String" resultType="com.gdufe.readingonline.dal.dataobject.GdufeLibraryEbookDO">
+        SELECT * FROM gdufe_library_ebook WHERE book_ISBN = #{bookIsbn} AND is_deleted = 0
+    </select>
+
+    <!-- 批量插入或更新电子书数据（基于ISBN） -->
+    <insert id="batchInsertOrUpdate" parameterType="java.util.List">
         INSERT INTO gdufe_library_ebook (
             book_name, book_ISBN, book_author, book_press, book_publication_time,
             book_url, book_brief_introduction, book_chinese_library_classification,
@@ -20,11 +25,21 @@
                 #{item.createTime}, #{item.updateTime}
             )
         </foreach>
+        ON DUPLICATE KEY UPDATE
+            book_name = VALUES(book_name),
+            book_author = VALUES(book_author),
+            book_press = VALUES(book_press),
+            book_publication_time = VALUES(book_publication_time),
+            book_url = VALUES(book_url),
+            book_brief_introduction = VALUES(book_brief_introduction),
+            book_chinese_library_classification = VALUES(book_chinese_library_classification),
+            book_subject_classification = VALUES(book_subject_classification),
+            book_primary_classification = VALUES(book_primary_classification),
+            book_secondary_classification = VALUES(book_secondary_classification),
+            book_picture_url = VALUES(book_picture_url),
+            book_source = VALUES(book_source),
+            is_deleted = VALUES(is_deleted),
+            update_time = VALUES(update_time)
     </insert>
-
-    <!-- 根据ISBN查询电子书 -->
-    <select id="selectByBookIsbn" parameterType="java.lang.String" resultType="com.gdufe.readingonline.dal.dataobject.GdufeLibraryEbookDO">
-        SELECT * FROM gdufe_library_ebook WHERE book_ISBN = #{bookIsbn} AND is_deleted = 0
-    </select>
 
 </mapper>
