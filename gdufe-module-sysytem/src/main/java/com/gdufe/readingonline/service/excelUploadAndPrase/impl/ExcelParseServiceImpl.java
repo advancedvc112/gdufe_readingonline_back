@@ -73,8 +73,8 @@ public class ExcelParseServiceImpl implements ExcelParseService {
                 ebook.setIsDeleted(0); // 默认未删除
             }
             
-            // 分批处理，每批1000条记录
-            int batchSize = 1000;
+            // 分批处理，每批5000条记录
+            int batchSize = 5000;
             int totalSize = ebookList.size();
             
             for (int i = 0; i < totalSize; i += batchSize) {
@@ -205,9 +205,9 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             // 根据畅想之星固定的字段名进行匹配
             if (headerValue.equals("主题名")) {
                 columnIndexMap.put("bookName", i);
-            } else if (headerValue.equals("第一责任人")) {
+            } else if (headerValue.equals("第一责任者")) {
                 columnIndexMap.put("author", i);
-            } else if (headerValue.equals("第二责任人")) {
+            } else if (headerValue.equals("第二责任者")) {
                 columnIndexMap.put("secondAuthor", i);
             } else if (headerValue.equals("出版社")) {
                 columnIndexMap.put("publisher", i);
