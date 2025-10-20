@@ -18,7 +18,6 @@ public interface GdufeLibraryEbookMapper extends BaseMapper<GdufeLibraryEbookDO>
     
     /**
      * 根据ISBN查询电子书
-     * 
      * @param bookIsbn ISBN号
      * @return 电子书信息
      */

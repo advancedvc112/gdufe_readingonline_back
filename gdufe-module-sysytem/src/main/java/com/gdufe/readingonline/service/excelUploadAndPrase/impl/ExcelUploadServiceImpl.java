@@ -42,10 +42,16 @@ public class ExcelUploadServiceImpl implements ExcelUploadService {
                 result.put("code", 200);
                 result.put("message", "excel解析并导入成功");
                 result.put("finishedCount", parseResult.getInsertedRows());
+                result.put("totalRows", parseResult.getTotalRows());
+                result.put("skippedRows", parseResult.getSkippedRows());
+                result.put("skippedRowsList", parseResult.getSkippedRowsList());
             } else {
                 result.put("code", 500);
                 result.put("message", "excel解析成功但导入失败");
                 result.put("finishedCount", 0);
+                result.put("totalRows", parseResult.getTotalRows());
+                result.put("skippedRows", parseResult.getSkippedRows());
+                result.put("skippedRowsList", parseResult.getSkippedRowsList());
             }
             
             return result;

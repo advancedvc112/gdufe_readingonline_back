@@ -28,6 +28,7 @@ public interface ExcelParseService {
         private int totalRows;
         private int insertedRows;
         private int skippedRows;
+        private java.util.List<Integer> skippedRowsList; // 跳过的行号列表
         
         // Getters and Setters
         public boolean isSuccess() { return success; }
@@ -44,5 +45,8 @@ public interface ExcelParseService {
         
         public int getSkippedRows() { return skippedRows; }
         public void setSkippedRows(int skippedRows) { this.skippedRows = skippedRows; }
+        
+        public java.util.List<Integer> getSkippedRowsList() { return skippedRowsList; }
+        public void setSkippedRowsList(java.util.List<Integer> skippedRowsList) { this.skippedRowsList = skippedRowsList; }
     }
 }

@@ -28,12 +28,14 @@ class ExcelParseResult {
     private int totalRows;
     private int successCount;
     private int failureCount;
+    private List<Integer> skippedRows; // 跳过的记录行号（ISBN为空的记录）
     
-    public ExcelParseResult(List<GdufeLibraryEbookDO> ebookList, int totalRows, int successCount, int failureCount) {
+    public ExcelParseResult(List<GdufeLibraryEbookDO> ebookList, int totalRows, int successCount, int failureCount, List<Integer> skippedRows) {
         this.ebookList = ebookList;
         this.totalRows = totalRows;
         this.successCount = successCount;
         this.failureCount = failureCount;
+        this.skippedRows = skippedRows;
     }
     
     public List<GdufeLibraryEbookDO> getEbookList() {
@@ -50,6 +52,10 @@ class ExcelParseResult {
     
     public int getFailureCount() {
         return failureCount;
+    }
+    
+    public List<Integer> getSkippedRows() {
+        return skippedRows;
     }
 }
 
@@ -120,19 +126,24 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             int totalSize = ebookList.size();
             int totalBatches = (totalSize + batchSize - 1) / batchSize; // 计算总批次数
             
-            logger.info("开始批量处理Excel数据，总记录数：{}，批次大小：{}，总批次数：{}", totalSize, batchSize, totalBatches);
+            logger.info("=== 开始批量处理Excel数据 ===");
+            logger.info("总记录数：{}，批次大小：{}，总批次数：{}", totalSize, batchSize, totalBatches);
             
             for (int i = 0; i < totalSize; i += batchSize) {
                 int endIndex = Math.min(i + batchSize, totalSize);
                 List<GdufeLibraryEbookDO> batch = ebookList.subList(i, endIndex);
+                int currentBatch = (i/batchSize + 1);
+                
+                logger.info("=== 开始处理第 {}/{} 批 === 批次大小：{}", currentBatch, totalBatches, batch.size());
                 
                 try {
                     // 使用批量插入或更新（基于ISBN）
                     int batchProcessed = ebookMapper.batchInsertOrUpdate(batch);
                     insertedCount += batchProcessed;
                     
-                    // 成功时只显示批次信息，不显示每条详细记录
-                    logger.info("批量处理第 {} 批成功，处理 {} 条记录（插入或更新）", (i/batchSize + 1), batchProcessed);
+                    // 成功时显示批次信息，便于监控处理进度
+                    logger.info("=== 批次 {}/{} 处理成功 === 处理记录数：{}，累计成功：{}", 
+                        (i/batchSize + 1), totalBatches, batchProcessed, insertedCount);
                     
                 } catch (Exception e) {
                     // 失败时显示详细错误信息
@@ -165,15 +176,18 @@ public class ExcelParseServiceImpl implements ExcelParseService {
                 }
             }
             
+            logger.info("=== 批量处理完成 === 总批次数：{}，成功处理：{}条记录", totalBatches, insertedCount);
+            
             result.setSuccess(true);
             result.setMessage("Excel文件解析并导入完成（基于ISBN进行插入或更新）");
             result.setTotalRows(parseResult.getTotalRows());
             result.setInsertedRows(insertedCount);
             result.setSkippedRows(skippedCount);
+            result.setSkippedRowsList(parseResult.getSkippedRows());
             
-            logger.info("Excel文件处理完成 - 解析统计：总行数={}, 解析成功={}, 解析失败={}, 数据库操作：成功处理={}, 跳过={}", 
+            logger.info("Excel文件处理完成 - 解析统计：总行数={}, 解析成功={}, 解析失败={}, ISBN为空跳过={}, 跳过行号={}, 数据库操作：成功处理={}, 跳过={}", 
                 parseResult.getTotalRows(), parseResult.getSuccessCount(), parseResult.getFailureCount(), 
-                insertedCount, skippedCount);
+                parseResult.getSkippedRows().size(), parseResult.getSkippedRows(), insertedCount, skippedCount);
             
         } catch (Exception e) {
             logger.error("Excel文件解析失败：{}", e.getMessage(), e);
@@ -193,6 +207,7 @@ public class ExcelParseServiceImpl implements ExcelParseService {
      */
     private ExcelParseResult parseChangxiangExcelFile(MultipartFile excelFile) {
         List<GdufeLibraryEbookDO> ebookList = new ArrayList<>();
+        List<Integer> skippedRows = new ArrayList<>(); // 记录跳过的行号（ISBN为空的记录）
         int totalRows = 0;
         int successCount = 0;
         int failureCount = 0;
@@ -229,6 +244,22 @@ public class ExcelParseServiceImpl implements ExcelParseService {
                 totalRows++;
                 
                 try {
+                    // 先检查ISBN是否为空，如果为空则跳过该记录
+                    Integer isbnIndex = columnIndexMap.get("isbn");
+                    if (isbnIndex != null) {
+                        Cell isbnCell = row.getCell(isbnIndex);
+                        String isbn = getCellStringValue(isbnCell);
+                        if (isbn == null || isbn.trim().isEmpty()) {
+                            skippedRows.add(i + 1); // 记录跳过的行号
+                            logger.warn("畅想之星跳过记录 - 行号：{}, 原因：ISBN号为空", i + 1);
+                            continue;
+                        }
+                    } else {
+                        skippedRows.add(i + 1); // 记录跳过的行号
+                        logger.warn("畅想之星跳过记录 - 行号：{}, 原因：Excel文件中缺少ISBN列", i + 1);
+                        continue;
+                    }
+                    
                     GdufeLibraryEbookDO ebook = parseChangxiangRow(row, columnIndexMap);
                     if (ebook != null) {
                         ebookList.add(ebook);
@@ -249,9 +280,9 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             logger.error("读取畅想之星Excel文件失败：{}", e.getMessage(), e);
         }
         
-        logger.info("畅想之星Excel解析完成 - 总行数：{}, 成功：{}, 失败：{}", totalRows, successCount, failureCount);
+        logger.info("畅想之星Excel解析完成 - 总行数：{}, 成功：{}, 失败：{}, 跳过：{}", totalRows, successCount, failureCount, skippedRows.size());
         
-        return new ExcelParseResult(ebookList, totalRows, successCount, failureCount);
+        return new ExcelParseResult(ebookList, totalRows, successCount, failureCount, skippedRows);
     }
     
     /**
@@ -533,6 +564,7 @@ public class ExcelParseServiceImpl implements ExcelParseService {
      */
     private ExcelParseResult parseJingdongExcelFile(MultipartFile excelFile) throws IOException {
         List<GdufeLibraryEbookDO> ebookList = new ArrayList<>();
+        List<Integer> skippedRows = new ArrayList<>(); // 记录跳过的行号（ISBN为空的记录）
         int totalRows = 0;
         int successCount = 0;
         int failureCount = 0;
@@ -550,7 +582,7 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             Sheet sheet = workbook.getSheetAt(0);
             if (sheet == null) {
                 logger.warn("京东Excel文件缺少工作表");
-                return new ExcelParseResult(ebookList, totalRows, successCount, failureCount);
+                return new ExcelParseResult(ebookList, totalRows, successCount, failureCount, skippedRows);
             }
             
             // 解析标题行，获取列索引映射
@@ -573,6 +605,22 @@ public class ExcelParseServiceImpl implements ExcelParseService {
                 totalRows++;
                 
                 try {
+                    // 先检查ISBN是否为空，如果为空则跳过该记录
+                    Integer isbnIndex = columnIndexMap.get("isbn");
+                    if (isbnIndex != null) {
+                        Cell isbnCell = row.getCell(isbnIndex);
+                        String isbn = getCellStringValue(isbnCell);
+                        if (isbn == null || isbn.trim().isEmpty()) {
+                            skippedRows.add(i + 1); // 记录跳过的行号
+                            logger.warn("京东跳过记录 - 行号：{}, 原因：ISBN号为空", i + 1);
+                            continue;
+                        }
+                    } else {
+                        skippedRows.add(i + 1); // 记录跳过的行号
+                        logger.warn("京东跳过记录 - 行号：{}, 原因：Excel文件中缺少ISBN列", i + 1);
+                        continue;
+                    }
+                    
                     GdufeLibraryEbookDO ebook = parseJingdongRow(row, columnIndexMap);
                     if (ebook != null) {
                         ebookList.add(ebook);
@@ -593,9 +641,9 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             }
         }
         
-        logger.info("京东Excel解析完成 - 总行数：{}, 成功：{}, 失败：{}", totalRows, successCount, failureCount);
+        logger.info("京东Excel解析完成 - 总行数：{}, 成功：{}, 失败：{}, 跳过：{}", totalRows, successCount, failureCount, skippedRows.size());
         
-        return new ExcelParseResult(ebookList, totalRows, successCount, failureCount);
+        return new ExcelParseResult(ebookList, totalRows, successCount, failureCount, skippedRows);
     }
     
     /**
@@ -679,12 +727,15 @@ public class ExcelParseServiceImpl implements ExcelParseService {
                 return null;
             }
             
-            // ISBN
+            // ISBN（已在主循环中验证不为空）
             Integer isbnIndex = columnIndexMap.get("isbn");
             if (isbnIndex != null) {
                 Cell isbnCell = row.getCell(isbnIndex);
                 if (isbnCell != null) {
-                    ebook.setBookIsbn(getCellStringValue(isbnCell).trim());
+                    String isbn = getCellStringValue(isbnCell);
+                    if (isbn != null && !isbn.trim().isEmpty()) {
+                        ebook.setBookIsbn(isbn.trim());
+                    }
                 }
             }
             
