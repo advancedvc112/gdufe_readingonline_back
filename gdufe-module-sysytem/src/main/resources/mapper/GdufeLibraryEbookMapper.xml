@@ -42,4 +42,14 @@
             update_time = VALUES(update_time)
     </insert>
 
+    <!-- 随机查询指定数量的电子书 -->
+    <select id="selectRandomBooks" resultType="com.gdufe.readingonline.dal.dataobject.GdufeLibraryEbookDO">
+        SELECT 
+            id, book_name, book_ISBN, book_author, book_brief_introduction
+        FROM gdufe_library_ebook 
+        WHERE is_deleted = 0
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
+
 </mapper>

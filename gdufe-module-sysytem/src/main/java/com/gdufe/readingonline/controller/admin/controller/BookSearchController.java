@@ -67,4 +67,26 @@ public class BookSearchController {
             return ResponseEntity.status(500).body(errorResult);
         }
     }
+
+    /**
+     * 随机获取4本图书接口
+     * 
+     * @return 随机图书列表（包含书名、作者、ISBN、简介）
+     */
+    @GetMapping("/random")
+    public ResponseEntity<Map<String, Object>> getRandomBooks() {
+        try {
+            // 调用Service获取随机图书
+            Map<String, Object> result = bookSearchService.getRandomBooks();
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("code", 500);
+            errorResult.put("message", "获取随机图书失败：" + e.getMessage());
+            errorResult.put("data", null);
+            return ResponseEntity.status(500).body(errorResult);
+        }
+    }
 }

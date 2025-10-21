@@ -31,4 +31,11 @@ public interface GdufeLibraryEbookMapper extends BaseMapper<GdufeLibraryEbookDO>
      * @return 影响的记录数
      */
     int batchInsertOrUpdate(@Param("list") List<GdufeLibraryEbookDO> ebookList);
+    
+    /**
+     * 随机查询指定数量的电子书
+     * @param limit 数量限制
+     * @return 随机电子书列表
+     */
+    List<GdufeLibraryEbookDO> selectRandomBooks(@Param("limit") int limit);
 }

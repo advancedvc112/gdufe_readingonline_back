@@ -9,7 +9,9 @@ import com.gdufe.readingonline.service.search.BookSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -64,6 +66,39 @@ public class BookSearchServiceImpl implements BookSearchService {
         } catch (Exception e) {
             result.put("code", 500);
             result.put("message", "搜索失败：" + e.getMessage());
+            result.put("data", null);
+        }
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> getRandomBooks() {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            // 从数据库随机查询4本书
+            List<GdufeLibraryEbookDO> randomBooks = gdufeLibraryEbookMapper.selectRandomBooks(4);
+            
+            // 构建返回数据，只包含书名、作者、ISBN、简介
+            List<Map<String, Object>> bookList = new ArrayList<>();
+            for (GdufeLibraryEbookDO book : randomBooks) {
+                Map<String, Object> bookInfo = new HashMap<>();
+                bookInfo.put("bookName", book.getBookName());
+                bookInfo.put("bookAuthor", book.getBookAuthor());
+                bookInfo.put("bookIsbn", book.getBookIsbn());
+                bookInfo.put("bookBriefIntroduction", book.getBookBriefIntroduction());
+                bookList.add(bookInfo);
+            }
+            
+            // 构建返回结果
+            result.put("code", 200);
+            result.put("message", "获取成功");
+            result.put("data", bookList);
+            
+        } catch (Exception e) {
+            result.put("code", 500);
+            result.put("message", "获取失败：" + e.getMessage());
             result.put("data", null);
         }
         

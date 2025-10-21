@@ -19,4 +19,11 @@ public interface BookSearchService {
      * @return 搜索结果，包含分页信息
      */
     Map<String, Object> searchBooksByName(String name, Integer page, Integer size);
+    
+    /**
+     * 随机获取图书
+     * 
+     * @return 随机图书列表（包含书名、作者、ISBN、简介）
+     */
+    Map<String, Object> getRandomBooks();
 }
