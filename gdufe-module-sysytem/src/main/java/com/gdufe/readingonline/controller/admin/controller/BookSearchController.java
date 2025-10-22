@@ -89,4 +89,56 @@ public class BookSearchController {
             return ResponseEntity.status(500).body(errorResult);
         }
     }
+    
+    /**
+     * 根据ISBN和来源精确查询图书
+     * 
+     * @param isbn 图书ISBN号
+     * @param source 图书来源（0-畅想之星, 1-京东）
+     * @return 图书详细信息
+     */
+    @GetMapping("/detail")
+    public ResponseEntity<Map<String, Object>> getBookDetail(
+            @RequestParam("isbn") String isbn,
+            @RequestParam("source") Integer source) {
+        
+        try {
+            // 参数验证
+            if (isbn == null || isbn.trim().isEmpty()) {
+                Map<String, Object> errorResult = new HashMap<>();
+                errorResult.put("code", 400);
+                errorResult.put("message", "ISBN不能为空");
+                errorResult.put("data", null);
+                return ResponseEntity.badRequest().body(errorResult);
+            }
+            
+            if (source == null || (source != 0 && source != 1)) {
+                Map<String, Object> errorResult = new HashMap<>();
+                errorResult.put("code", 400);
+                errorResult.put("message", "来源参数错误，必须为0（畅想之星）或1（京东）");
+                errorResult.put("data", null);
+                return ResponseEntity.badRequest().body(errorResult);
+            }
+            
+            // 调用Service进行精确查询
+            Map<String, Object> result = bookSearchService.getBookByIsbnAndSource(isbn.trim(), source);
+            
+            // 根据结果code返回相应的HTTP状态码
+            Integer code = (Integer) result.get("code");
+            if (code == 404) {
+                return ResponseEntity.status(404).body(result);
+            } else if (code == 500) {
+                return ResponseEntity.status(500).body(result);
+            }
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("code", 500);
+            errorResult.put("message", "查询失败：" + e.getMessage());
+            errorResult.put("data", null);
+            return ResponseEntity.status(500).body(errorResult);
+        }
+    }
 }

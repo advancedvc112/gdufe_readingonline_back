@@ -26,4 +26,13 @@ public interface BookSearchService {
      * @return 随机图书列表（包含书名、作者、ISBN、简介）
      */
     Map<String, Object> getRandomBooks();
+    
+    /**
+     * 根据ISBN和来源精确查询图书
+     * 
+     * @param isbn 图书ISBN号
+     * @param source 图书来源（0-畅想之星, 1-京东）
+     * @return 图书详细信息
+     */
+    Map<String, Object> getBookByIsbnAndSource(String isbn, Integer source);
 }
