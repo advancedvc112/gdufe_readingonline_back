@@ -39,6 +39,8 @@ public class BookSearchServiceImpl implements BookSearchService {
             queryWrapper.select(GdufeLibraryEbookDO::getBookName, 
                               GdufeLibraryEbookDO::getBookIsbn,
                               GdufeLibraryEbookDO::getBookAuthor,
+                              GdufeLibraryEbookDO::getBookPress,
+                              GdufeLibraryEbookDO::getBookUrl,
                               GdufeLibraryEbookDO::getBookSource,
                               GdufeLibraryEbookDO::getBookPictureUrl)
                        .like(GdufeLibraryEbookDO::getBookName, name)
@@ -54,6 +56,8 @@ public class BookSearchServiceImpl implements BookSearchService {
                 bookInfo.put("bookName", book.getBookName());
                 bookInfo.put("bookIsbn", book.getBookIsbn());
                 bookInfo.put("bookAuthor", book.getBookAuthor());
+                bookInfo.put("bookPress", book.getBookPress());
+                bookInfo.put("bookUrl", book.getBookUrl());
                 // 来源平台：0-畅想之星, 1-京东
                 String bookSource = book.getBookSource() == 0 ? "畅想之星" : "京东";
                 bookInfo.put("bookSource", bookSource);
