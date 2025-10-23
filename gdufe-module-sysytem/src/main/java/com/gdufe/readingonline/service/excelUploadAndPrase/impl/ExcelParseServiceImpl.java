@@ -1,5 +1,6 @@
 package com.gdufe.readingonline.service.excelUploadAndPrase.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.gdufe.readingonline.service.excelUploadAndPrase.ExcelParseService;
 import com.gdufe.readingonline.dal.dataobject.GdufeLibraryEbookDO;
 import com.gdufe.readingonline.dal.mysqlmapper.GdufeLibraryEbookMapper;
@@ -153,7 +154,9 @@ public class ExcelParseServiceImpl implements ExcelParseService {
                     for (GdufeLibraryEbookDO ebook : batch) {
                         try {
                             // 先查询是否存在
-                            GdufeLibraryEbookDO existingEbook = ebookMapper.selectByBookIsbn(ebook.getBookIsbn());
+                            LambdaQueryWrapper<GdufeLibraryEbookDO> queryWrapper = new LambdaQueryWrapper<>();
+                            queryWrapper.eq(GdufeLibraryEbookDO::getBookIsbn, ebook.getBookIsbn());
+                            GdufeLibraryEbookDO existingEbook = ebookMapper.selectOne(queryWrapper);
                             if (existingEbook != null) {
                                 // 存在则更新
                                 ebook.setId(existingEbook.getId());

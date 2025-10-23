@@ -17,13 +17,6 @@ import java.util.List;
 public interface GdufeLibraryEbookMapper extends BaseMapper<GdufeLibraryEbookDO> {
     
     /**
-     * 根据ISBN查询电子书
-     * @param bookIsbn ISBN号
-     * @return 电子书信息
-     */
-    GdufeLibraryEbookDO selectByBookIsbn(@Param("bookIsbn") String bookIsbn);
-    
-    /**
      * 批量插入或更新电子书数据（基于ISBN）
      * 如果ISBN已存在则更新，否则插入
      * 
@@ -31,11 +24,4 @@ public interface GdufeLibraryEbookMapper extends BaseMapper<GdufeLibraryEbookDO>
      * @return 影响的记录数
      */
     int batchInsertOrUpdate(@Param("list") List<GdufeLibraryEbookDO> ebookList);
-    
-    /**
-     * 随机查询指定数量的电子书
-     * @param limit 数量限制
-     * @return 随机电子书列表
-     */
-    List<GdufeLibraryEbookDO> selectRandomBooks(@Param("limit") int limit);
 }

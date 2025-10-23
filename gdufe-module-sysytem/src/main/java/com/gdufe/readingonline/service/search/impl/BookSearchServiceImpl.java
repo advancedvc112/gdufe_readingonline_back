@@ -99,17 +99,31 @@ public class BookSearchServiceImpl implements BookSearchService {
         Map<String, Object> result = new HashMap<>();
         
         try {
-            // 从数据库随机查询4本书
-            List<GdufeLibraryEbookDO> randomBooks = gdufeLibraryEbookMapper.selectRandomBooks(4);
+            // 使用 QueryWrapper 从数据库随机查询4本书
+            LambdaQueryWrapper<GdufeLibraryEbookDO> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.select(GdufeLibraryEbookDO::getBookName,
+                              GdufeLibraryEbookDO::getBookAuthor,
+                              GdufeLibraryEbookDO::getBookIsbn,
+                              GdufeLibraryEbookDO::getBookPress,
+                              GdufeLibraryEbookDO::getBookUrl,
+                              GdufeLibraryEbookDO::getBookSource,
+                              GdufeLibraryEbookDO::getBookPictureUrl)
+                       .eq(GdufeLibraryEbookDO::getIsDeleted, 0)
+                       .last("ORDER BY RAND() LIMIT 4");
             
-            // 构建返回数据，只包含书名、作者、ISBN、简介
+            List<GdufeLibraryEbookDO> randomBooks = gdufeLibraryEbookMapper.selectList(queryWrapper);
+            
+            // 构建返回数据，只包含书名、作者、ISBN、出版社、链接、来源、封面图片URL
             List<Map<String, Object>> bookList = new ArrayList<>();
             for (GdufeLibraryEbookDO book : randomBooks) {
                 Map<String, Object> bookInfo = new HashMap<>();
                 bookInfo.put("bookName", book.getBookName());
                 bookInfo.put("bookAuthor", book.getBookAuthor());
                 bookInfo.put("bookIsbn", book.getBookIsbn());
-                bookInfo.put("bookBriefIntroduction", book.getBookBriefIntroduction());
+                bookInfo.put("bookPress", book.getBookPress());
+                bookInfo.put("bookUrl", book.getBookUrl());
+                bookInfo.put("bookSource", book.getBookSource());
+                bookInfo.put("bookPictureUrl", book.getBookPictureUrl());
                 bookList.add(bookInfo);
             }
             

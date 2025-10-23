@@ -2,11 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.gdufe.readingonline.dal.mysqlmapper.GdufeLibraryEbookMapper">
 
-    <!-- 根据ISBN查询电子书 -->
-    <select id="selectByBookIsbn" parameterType="java.lang.String" resultType="com.gdufe.readingonline.dal.dataobject.GdufeLibraryEbookDO">
-        SELECT * FROM gdufe_library_ebook WHERE book_ISBN = #{bookIsbn} AND is_deleted = 0
-    </select>
-
     <!-- 批量插入或更新电子书数据（基于ISBN） -->
     <insert id="batchInsertOrUpdate" parameterType="java.util.List">
         INSERT INTO gdufe_library_ebook (
@@ -41,15 +36,5 @@
             is_deleted = VALUES(is_deleted),
             update_time = VALUES(update_time)
     </insert>
-
-    <!-- 随机查询指定数量的电子书 -->
-    <select id="selectRandomBooks" resultType="com.gdufe.readingonline.dal.dataobject.GdufeLibraryEbookDO">
-        SELECT 
-            id, book_name, book_ISBN, book_author, book_brief_introduction
-        FROM gdufe_library_ebook 
-        WHERE is_deleted = 0
-        ORDER BY RAND()
-        LIMIT #{limit}
-    </select>
 
 </mapper>
