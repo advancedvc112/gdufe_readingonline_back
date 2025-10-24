@@ -1,10 +1,12 @@
 package com.gdufe.readingonline.service.topic.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.gdufe.readingonline.controller.admin.vo.TopicCreateRequestVO;
 import com.gdufe.readingonline.controller.admin.vo.TopicCreateResponseVO;
 import com.gdufe.readingonline.controller.admin.vo.TopicDetailResponseVO;
 import com.gdufe.readingonline.controller.admin.vo.TopicListItemVO;
+import com.gdufe.readingonline.controller.admin.vo.TopicUpdateRequestVO;
 import com.gdufe.readingonline.dal.dataobject.GdufeTopicEbookDO;
 import com.gdufe.readingonline.dal.mysqlmapper.GdufeTopicEbookMapper;
 import com.gdufe.readingonline.service.topic.TopicService;
@@ -18,7 +20,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 图书专题Service实现类
@@ -46,14 +47,12 @@ public class TopicServiceImpl implements TopicService {
         try {
             logger.info("开始创建图书专题，创建人：{}", requestVO.getCreator());
             
-            // 生成专题编号：当前时间年月日 + 6位UUID
-            String topicNo = generateTopicNo();
-            logger.info("生成专题编号：{}", topicNo);
-            
             // 创建实体对象
             GdufeTopicEbookDO topicDO = new GdufeTopicEbookDO();
-            topicDO.setBookTopicNo(topicNo);
             topicDO.setBookTopicHtml(requestVO.getHtmlContent()); // 保持HTML文本完整
+            topicDO.setBookTopicTitle(requestVO.getTopicTitle()); // 专题标题
+            topicDO.setBookTopicBriefIntroduction(requestVO.getTopicBriefIntroduction()); // 专题简介
+            topicDO.setBookTopicCatagory(requestVO.getTopicCategory()); // 专题分类
             topicDO.setBookTopicCreator(requestVO.getCreator());
             topicDO.setBookTopicStatus(0); // 默认为草稿状态
             topicDO.setIsDeleted(0); // 未删除
@@ -64,11 +63,10 @@ public class TopicServiceImpl implements TopicService {
             int insertResult = topicEbookMapper.insert(topicDO);
             
             if (insertResult > 0) {
-                logger.info("图书专题创建成功，专题ID：{}，专题编号：{}", topicDO.getId(), topicNo);
+                logger.info("图书专题创建成功，专题ID：{}", topicDO.getId());
                 
                 // 构建响应对象
                 TopicCreateResponseVO responseVO = new TopicCreateResponseVO();
-                responseVO.setTopicNo(topicNo);
                 responseVO.setTopicId(topicDO.getId());
                 responseVO.setCreateTime(topicDO.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
                 
@@ -85,26 +83,26 @@ public class TopicServiceImpl implements TopicService {
     }
     
     /**
-     * 根据专题编号获取专题详情
+     * 根据专题ID获取专题详情
      * 
-     * @param topicNo 专题编号
+     * @param topicId 专题ID
      * @return 专题详情响应VO
      */
     @Override
-    public TopicDetailResponseVO getTopicByNo(String topicNo) {
+    public TopicDetailResponseVO getTopicById(Long topicId) {
         try {
-            logger.info("开始查询专题详情，专题编号：{}", topicNo);
+            logger.info("开始查询专题详情，专题ID：{}", topicId);
             
             // 构建查询条件
             QueryWrapper<GdufeTopicEbookDO> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("book_topic_no", topicNo)
+            queryWrapper.eq("id", topicId)
                        .eq("is_deleted", 0); // 只查询未删除的专题
             
             // 查询数据库
             GdufeTopicEbookDO topicDO = topicEbookMapper.selectOne(queryWrapper);
             
             if (topicDO == null) {
-                logger.warn("专题不存在，专题编号：{}", topicNo);
+                logger.warn("专题不存在，专题ID：{}", topicId);
                 throw new RuntimeException("专题不存在");
             }
             
@@ -164,7 +162,10 @@ public class TopicServiceImpl implements TopicService {
                 
                 for (GdufeTopicEbookDO topicDO : topicDOList) {
                     TopicListItemVO itemVO = new TopicListItemVO();
-                    itemVO.setTopicNo(topicDO.getBookTopicNo());
+                    itemVO.setTopicId(topicDO.getId());
+                    itemVO.setTopicTitle(topicDO.getBookTopicTitle());
+                    itemVO.setTopicBriefIntroduction(topicDO.getBookTopicBriefIntroduction());
+                    itemVO.setTopicCategory(topicDO.getBookTopicCatagory());
                     itemVO.setHtmlContent(topicDO.getBookTopicHtml());
                     
                     // 格式化发布时间（使用创建时间作为发布时间）
@@ -191,18 +192,57 @@ public class TopicServiceImpl implements TopicService {
     }
     
     /**
-     * 生成专题编号：当前时间年月日 + 6位UUID
-     * 格式：yyyyMMdd + 6位UUID
+     * 更新图书专题
      * 
-     * @return 专题编号
+     * @param requestVO 更新请求VO
+     * @return 是否更新成功
      */
-    private String generateTopicNo() {
-        // 获取当前日期，格式：yyyyMMdd
-        String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        
-        // 生成6位UUID（取UUID的前6位）
-        String uuid = UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
-        
-        return dateStr + uuid;
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateTopic(TopicUpdateRequestVO requestVO) {
+        try {
+            logger.info("开始更新图书专题，专题ID：{}", requestVO.getTopicId());
+            
+            // 先检查专题是否存在
+            QueryWrapper<GdufeTopicEbookDO> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("id", requestVO.getTopicId())
+                       .eq("is_deleted", 0); // 只查询未删除的专题
+            
+            GdufeTopicEbookDO existingTopic = topicEbookMapper.selectOne(queryWrapper);
+            if (existingTopic == null) {
+                logger.warn("专题不存在或已删除，专题ID：{}", requestVO.getTopicId());
+                throw new RuntimeException("专题不存在或已删除");
+            }
+            
+            // 构建更新条件
+            UpdateWrapper<GdufeTopicEbookDO> updateWrapper = new UpdateWrapper<>();
+            updateWrapper.eq("id", requestVO.getTopicId())
+                        .eq("is_deleted", 0); // 只更新未删除的专题
+            
+            // 构建更新实体
+            GdufeTopicEbookDO updateDO = new GdufeTopicEbookDO();
+            updateDO.setBookTopicHtml(requestVO.getHtmlContent());
+            updateDO.setBookTopicTitle(requestVO.getTopicTitle());
+            updateDO.setBookTopicBriefIntroduction(requestVO.getTopicBriefIntroduction());
+            updateDO.setBookTopicCatagory(requestVO.getTopicCategory());
+            updateDO.setBookTopicCreator(requestVO.getCreator());
+            updateDO.setUpdateTime(LocalDateTime.now());
+            
+            // 执行更新
+            int updateResult = topicEbookMapper.update(updateDO, updateWrapper);
+            
+            if (updateResult > 0) {
+                logger.info("图书专题更新成功，专题ID：{}", requestVO.getTopicId());
+                return true;
+            } else {
+                logger.error("图书专题更新失败，数据库更新返回0，专题ID：{}", requestVO.getTopicId());
+                throw new RuntimeException("图书专题更新失败");
+            }
+            
+        } catch (Exception e) {
+            logger.error("更新图书专题时发生异常：{}", e.getMessage(), e);
+            throw new RuntimeException("更新图书专题失败：" + e.getMessage());
+        }
     }
+    
 }

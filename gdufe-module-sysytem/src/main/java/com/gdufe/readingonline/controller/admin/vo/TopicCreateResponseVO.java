@@ -16,11 +16,6 @@ import lombok.NoArgsConstructor;
 public class TopicCreateResponseVO {
     
     /**
-     * 专题编号
-     */
-    private String topicNo;
-    
-    /**
      * 专题ID
      */
     private Long topicId;

@@ -23,7 +23,7 @@ public class ExcelUploadServiceImpl implements ExcelUploadService {
     
     @Override
     public Map<String, Object> processExcelUpload(MultipartFile excelFile, String fileName, 
-                                                  Long fileSize, String fileSource) {
+                                                  Long fileSize, String fileSource, Integer excelCategory) {
         Map<String, Object> result = new HashMap<>();
         
         try {
@@ -35,8 +35,22 @@ public class ExcelUploadServiceImpl implements ExcelUploadService {
                 return result;
             }
             
-            // 解析Excel文件并导入数据库
-            ExcelParseService.ParseResult parseResult = excelParseService.parseAndImportExcel(excelFile, fileSource);
+            // 根据excelCategory选择不同的处理方式
+            ExcelParseService.ParseResult parseResult;
+            if (excelCategory == 0) {
+                // 图书详情表（原有逻辑）
+                System.out.println("开始处理图书详情表Excel...");
+                parseResult = excelParseService.parseAndImportExcel(excelFile, fileSource);
+            } else if (excelCategory == 1) {
+                // 封面图详情表（新增逻辑）
+                System.out.println("开始处理封面图详情表Excel...");
+                parseResult = excelParseService.parseAndImportCoverImages(excelFile, fileSource);
+            } else {
+                result.put("code", 400);
+                result.put("message", "不支持的Excel类型");
+                result.put("finishedCount", 0);
+                return result;
+            }
             
             if (parseResult.isSuccess()) {
                 result.put("code", 200);

@@ -4,6 +4,7 @@ import com.gdufe.readingonline.controller.admin.vo.TopicCreateRequestVO;
 import com.gdufe.readingonline.controller.admin.vo.TopicCreateResponseVO;
 import com.gdufe.readingonline.controller.admin.vo.TopicDetailResponseVO;
 import com.gdufe.readingonline.controller.admin.vo.TopicListItemVO;
+import com.gdufe.readingonline.controller.admin.vo.TopicUpdateRequestVO;
 
 import java.util.List;
 
@@ -24,12 +25,12 @@ public interface TopicService {
     TopicCreateResponseVO createTopic(TopicCreateRequestVO requestVO);
     
     /**
-     * 根据专题编号获取专题详情
+     * 根据专题ID获取专题详情
      * 
-     * @param topicNo 专题编号
+     * @param topicId 专题ID
      * @return 专题详情响应VO
      */
-    TopicDetailResponseVO getTopicByNo(String topicNo);
+    TopicDetailResponseVO getTopicById(Long topicId);
     
     /**
      * 获取最近发布的专题列表（按发布时间倒序，最多返回4条）
@@ -37,4 +38,12 @@ public interface TopicService {
      * @return 专题列表
      */
     List<TopicListItemVO> getRecentTopics();
+    
+    /**
+     * 更新图书专题
+     * 
+     * @param requestVO 更新请求VO
+     * @return 是否更新成功
+     */
+    boolean updateTopic(TopicUpdateRequestVO requestVO);
 }

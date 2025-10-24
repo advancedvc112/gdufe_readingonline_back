@@ -18,10 +18,11 @@ public interface ExcelUploadService {
      * @param fileName 文件名
      * @param fileSize 文件大小
      * @param fileSource 文件来源
+     * @param excelCategory Excel类型（0:图书详情表, 1:封面图详情表）
      * @return 处理结果
      */
     Map<String, Object> processExcelUpload(MultipartFile excelFile, String fileName, 
-                                          Long fileSize, String fileSource);
+                                          Long fileSize, String fileSource, Integer excelCategory);
     
     /**
      * 验证Excel文件

@@ -12,9 +12,24 @@ import lombok.Data;
 public class TopicListItemVO {
     
     /**
-     * 专题编号
+     * 专题ID
      */
-    private String topicNo;
+    private Long topicId;
+    
+    /**
+     * 专题标题
+     */
+    private String topicTitle;
+    
+    /**
+     * 专题简介
+     */
+    private String topicBriefIntroduction;
+    
+    /**
+     * 专题分类
+     */
+    private Integer topicCategory;
     
     /**
      * 专题HTML文本

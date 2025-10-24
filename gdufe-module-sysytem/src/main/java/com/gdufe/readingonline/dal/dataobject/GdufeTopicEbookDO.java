@@ -24,14 +24,24 @@ public class GdufeTopicEbookDO {
     private Long id;
     
     /**
-     * 专题编号（当前时间年月日+6位uuid）
-     */
-    private String bookTopicNo;
-    
-    /**
      * 专题HTML文本
      */
     private String bookTopicHtml;
+    
+    /**
+     * 专题标题
+     */
+    private String bookTopicTitle;
+    
+    /**
+     * 专题简介
+     */
+    private String bookTopicBriefIntroduction;
+    
+    /**
+     * 专题分类
+     */
+    private Integer bookTopicCatagory;
     
     /**
      * 发布状态（0:草稿, 1:已发布, 2:已下线）

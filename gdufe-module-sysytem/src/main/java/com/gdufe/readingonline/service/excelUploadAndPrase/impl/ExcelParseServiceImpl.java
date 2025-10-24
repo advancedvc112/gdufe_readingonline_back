@@ -558,6 +558,186 @@ public class ExcelParseServiceImpl implements ExcelParseService {
     }
     
     /**
+     * 解析封面图Excel文件并更新数据库中的封面图URL
+     * 
+     * @param excelFile Excel文件
+     * @param fileSource 文件来源（0:畅想之星, 1:京东）
+     * @return 导入结果
+     */
+    @Override
+    public ParseResult parseAndImportCoverImages(MultipartFile excelFile, String fileSource) {
+        ParseResult result = new ParseResult();
+        
+        try {
+            // 解析Excel文件
+            Workbook workbook;
+            String fileName = excelFile.getOriginalFilename();
+            
+            if (fileName != null && fileName.toLowerCase().endsWith(".xlsx")) {
+                workbook = new XSSFWorkbook(excelFile.getInputStream());
+            } else {
+                workbook = new HSSFWorkbook(excelFile.getInputStream());
+            }
+            
+            Sheet sheet = workbook.getSheetAt(0); // 获取第一个工作表
+            
+            // 解析标题行，获取ISBN和封面图URL的列索引
+            Row headerRow = sheet.getRow(0);
+            if (headerRow == null) {
+                result.setSuccess(false);
+                result.setMessage("Excel文件第一行（标题行）为空");
+                return result;
+            }
+            
+            Integer isbnColumnIndex = null;
+            Integer coverUrlColumnIndex = null;
+            
+            // 遍历标题行查找ISBN和封面图列
+            for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+                Cell cell = headerRow.getCell(i);
+                if (cell == null) continue;
+                
+                String headerValue = getCellStringValue(cell).trim();
+                if (headerValue.isEmpty()) continue;
+                
+                // 匹配ISBN列
+                if (headerValue.equals("ISBN")) {
+                    isbnColumnIndex = i;
+                }
+                // 匹配封面图列
+                else if (headerValue.equals("图书封面")) {
+                    coverUrlColumnIndex = i;
+                }
+            }
+            
+            // 验证必要的列是否存在
+            if (isbnColumnIndex == null) {
+                result.setSuccess(false);
+                result.setMessage("Excel文件中缺少ISBN列");
+                workbook.close();
+                return result;
+            }
+            
+            if (coverUrlColumnIndex == null) {
+                result.setSuccess(false);
+                result.setMessage("Excel文件中缺少图书封面列");
+                workbook.close();
+                return result;
+            }
+            
+            logger.info("封面图Excel列索引 - ISBN列：{}, 封面图列：{}", isbnColumnIndex, coverUrlColumnIndex);
+            
+            // 解析数据行并更新数据库
+            int totalRows = 0;
+            int updatedRows = 0;
+            int skippedRows = 0;
+            List<Integer> skippedRowsList = new ArrayList<>();
+            
+            // 确定book_source的值
+            Integer bookSource = null;
+            if ("0".equals(fileSource) || "changxiang".equalsIgnoreCase(fileSource)) {
+                bookSource = 0; // 畅想之星
+            } else if ("1".equals(fileSource) || "jingdong".equalsIgnoreCase(fileSource)) {
+                bookSource = 1; // 京东
+            } else {
+                result.setSuccess(false);
+                result.setMessage("不支持的文件来源：" + fileSource);
+                workbook.close();
+                return result;
+            }
+            
+            // 从第二行开始解析数据
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) {
+                    skippedRows++;
+                    skippedRowsList.add(i + 1);
+                    logger.warn("封面图解析跳过 - 行号：{}, 原因：行为空", i + 1);
+                    continue;
+                }
+                
+                totalRows++;
+                
+                try {
+                    // 读取ISBN
+                    Cell isbnCell = row.getCell(isbnColumnIndex);
+                    String isbn = getCellStringValue(isbnCell);
+                    if (isbn == null || isbn.trim().isEmpty()) {
+                        skippedRows++;
+                        skippedRowsList.add(i + 1);
+                        logger.warn("封面图解析跳过 - 行号：{}, 原因：ISBN为空", i + 1);
+                        continue;
+                    }
+                    isbn = isbn.trim();
+                    
+                    // 读取封面图URL
+                    Cell coverUrlCell = row.getCell(coverUrlColumnIndex);
+                    String coverUrl = getCellStringValue(coverUrlCell);
+                    if (coverUrl == null || coverUrl.trim().isEmpty()) {
+                        skippedRows++;
+                        skippedRowsList.add(i + 1);
+                        logger.warn("封面图解析跳过 - 行号：{}, 原因：封面图URL为空", i + 1);
+                        continue;
+                    }
+                    coverUrl = coverUrl.trim();
+                    
+                    // 根据ISBN和book_source查询数据库
+                    LambdaQueryWrapper<GdufeLibraryEbookDO> queryWrapper = new LambdaQueryWrapper<>();
+                    queryWrapper.eq(GdufeLibraryEbookDO::getBookIsbn, isbn)
+                               .eq(GdufeLibraryEbookDO::getBookSource, bookSource);
+                    
+                    GdufeLibraryEbookDO ebook = ebookMapper.selectOne(queryWrapper);
+                    
+                    if (ebook != null) {
+                        // 找到记录，更新封面图URL
+                        ebook.setBookPictureUrl(coverUrl);
+                        ebook.setUpdateTime(LocalDateTime.now());
+                        
+                        int updateResult = ebookMapper.updateById(ebook);
+                        if (updateResult > 0) {
+                            updatedRows++;
+                            logger.debug("封面图更新成功 - 行号：{}, ISBN：{}, 书名：{}", i + 1, isbn, ebook.getBookName());
+                        } else {
+                            skippedRows++;
+                            skippedRowsList.add(i + 1);
+                            logger.warn("封面图更新失败 - 行号：{}, ISBN：{}", i + 1, isbn);
+                        }
+                    } else {
+                        // 未找到记录
+                        skippedRows++;
+                        skippedRowsList.add(i + 1);
+                        logger.warn("封面图解析跳过 - 行号：{}, 原因：未找到匹配记录（ISBN：{}, 来源：{}）", i + 1, isbn, bookSource);
+                    }
+                    
+                } catch (Exception e) {
+                    skippedRows++;
+                    skippedRowsList.add(i + 1);
+                    logger.error("封面图解析失败 - 行号：{}, 原因：{}", i + 1, e.getMessage(), e);
+                }
+            }
+            
+            workbook.close();
+            
+            result.setSuccess(true);
+            result.setMessage("封面图Excel解析并更新完成");
+            result.setTotalRows(totalRows);
+            result.setInsertedRows(updatedRows);
+            result.setSkippedRows(skippedRows);
+            result.setSkippedRowsList(skippedRowsList);
+            
+            logger.info("封面图Excel处理完成 - 总行数：{}, 更新成功：{}, 跳过：{}, 跳过行号：{}", 
+                totalRows, updatedRows, skippedRows, skippedRowsList);
+            
+        } catch (Exception e) {
+            logger.error("封面图Excel文件解析失败：{}", e.getMessage(), e);
+            result.setSuccess(false);
+            result.setMessage("封面图Excel文件解析失败：" + e.getMessage());
+        }
+        
+        return result;
+    }
+    
+    /**
      * 解析京东Excel文件
      * 京东Excel格式：书名、ISBN、著者、出版社、一级分类、二级分类、出版时间、URL链接、简介
      * 

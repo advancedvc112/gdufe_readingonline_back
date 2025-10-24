@@ -30,6 +30,7 @@ public class ExcelUploadController {
      * @param fileName 文件名
      * @param fileSize 文件大小
      * @param fileSource 文件来源
+     * @param excelCategory Excel类型（0:图书详情表, 1:封面图详情表）
      * @return 上传结果
      */
     @PostMapping("/upload-excel")
@@ -37,7 +38,8 @@ public class ExcelUploadController {
             @RequestParam("excelFile") MultipartFile excelFile,
             @RequestParam("fileName") String fileName,
             @RequestParam("fileSize") Long fileSize,
-            @RequestParam("fileSource") String fileSource) {
+            @RequestParam("fileSource") String fileSource,
+            @RequestParam(value = "excelCategory", defaultValue = "0") Integer excelCategory) {
         
         try {
             // 参数验证
@@ -55,9 +57,17 @@ public class ExcelUploadController {
                 return ResponseEntity.badRequest().body(errorResult);
             }
             
+            // 验证excelCategory参数
+            if (excelCategory != 0 && excelCategory != 1) {
+                Map<String, Object> errorResult = new HashMap<>();
+                errorResult.put("success", false);
+                errorResult.put("message", "Excel类型参数错误，必须是0(图书详情表)或1(封面图详情表)");
+                return ResponseEntity.badRequest().body(errorResult);
+            }
+            
             // 使用Service处理Excel上传
             Map<String, Object> result = excelUploadService.processExcelUpload(
-                excelFile, fileName, fileSize, fileSource);
+                excelFile, fileName, fileSize, fileSource, excelCategory);
             
             // 检查Service层返回的code字段
             Integer code = (Integer) result.get("code");

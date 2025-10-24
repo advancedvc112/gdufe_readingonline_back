@@ -20,6 +20,15 @@ public interface ExcelParseService {
     ParseResult parseAndImportExcel(MultipartFile excelFile, String fileSource);
     
     /**
+     * 解析封面图Excel文件并更新数据库中的封面图URL
+     * 
+     * @param excelFile Excel文件
+     * @param fileSource 文件来源（0:畅想之星, 1:京东）
+     * @return 导入结果
+     */
+    ParseResult parseAndImportCoverImages(MultipartFile excelFile, String fileSource);
+    
+    /**
      * 解析结果类
      */
     class ParseResult {

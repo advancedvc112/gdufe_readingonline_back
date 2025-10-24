@@ -3,16 +3,21 @@ package com.gdufe.readingonline.controller.admin.vo;
 import lombok.Data;
 
 /**
- * 图书专题创建请求VO
+ * 图书专题更新请求VO
  * 
  * @author gdufe
  * @date 2025
  */
 @Data
-public class TopicCreateRequestVO {
+public class TopicUpdateRequestVO {
     
     /**
-     * 专题HTML文本（前端传递的JSON格式的HTML文本）
+     * 专题ID
+     */
+    private Long topicId;
+    
+    /**
+     * 专题HTML文本
      */
     private String htmlContent;
     
@@ -36,3 +41,4 @@ public class TopicCreateRequestVO {
      */
     private Integer topicCategory;
 }
+
