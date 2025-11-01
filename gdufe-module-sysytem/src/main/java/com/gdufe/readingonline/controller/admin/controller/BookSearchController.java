@@ -141,4 +141,59 @@ public class BookSearchController {
             return ResponseEntity.status(500).body(errorResult);
         }
     }
+    
+    /**
+     * 按分类查询图书接口
+     * 
+     * @param category 图书主分类（0-22）
+     * @param page 页码（从1开始）
+     * @param size 每页大小
+     * @return 该分类的图书列表
+     */
+    @GetMapping("/category")
+    public ResponseEntity<Map<String, Object>> searchBooksByCategory(
+            @RequestParam("category") Integer category,
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size) {
+        
+        try {
+            // 参数验证
+            if (category == null) {
+                Map<String, Object> errorResult = new HashMap<>();
+                errorResult.put("code", 400);
+                errorResult.put("message", "分类参数不能为空");
+                errorResult.put("data", null);
+                return ResponseEntity.badRequest().body(errorResult);
+            }
+            
+            // 验证分类范围（0-22）
+            if (category < 0 || category > 22) {
+                Map<String, Object> errorResult = new HashMap<>();
+                errorResult.put("code", 400);
+                errorResult.put("message", "分类参数错误，必须在0-22之间");
+                errorResult.put("data", null);
+                return ResponseEntity.badRequest().body(errorResult);
+            }
+            
+            // 页码和大小验证
+            if (page < 1) {
+                page = 1;
+            }
+            if (size < 1 || size > 100) {
+                size = 10; // 限制每页最大100条
+            }
+            
+            // 调用Service进行查询
+            Map<String, Object> result = bookSearchService.searchBooksByCategory(category, page, size);
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("code", 500);
+            errorResult.put("message", "查询失败：" + e.getMessage());
+            errorResult.put("data", null);
+            return ResponseEntity.status(500).body(errorResult);
+        }
+    }
 }

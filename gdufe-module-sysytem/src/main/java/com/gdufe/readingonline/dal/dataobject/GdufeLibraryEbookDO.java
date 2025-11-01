@@ -67,9 +67,9 @@ public class GdufeLibraryEbookDO {
     private String bookSubjectClassification;
     
     /**
-     * 图书一级分类
+     * 图书一级分类: 0-空白, 1-社会科学, 2-小说, 3-教材教辅, 4-科学新知, 5-文学, 6-经济管理, 7-少儿, 8-进口原版, 9-计算机, 10-生活休闲, 11-成功励志, 12-历史考古, 13-艺术摄影, 14-外语学习, 15-政治军事, 16-人物传记, 17-家教育儿, 18-中外名著, 19-漫画杂志, 20-职场进阶, 21-互联网+, 22-影视原著
      */
-    private String bookPrimaryClassification;
+    private Integer bookPrimaryClassification;
     
     /**
      * 图书二级分类

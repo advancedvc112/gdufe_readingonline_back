@@ -196,4 +196,70 @@ public class BookSearchServiceImpl implements BookSearchService {
         
         return result;
     }
+    
+    @Override
+    public Map<String, Object> searchBooksByCategory(Integer category, Integer page, Integer size) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            // 创建分页对象
+            Page<GdufeLibraryEbookDO> pageParam = new Page<>(page, size);
+            
+            // 构建查询条件：主分类匹配，且未删除
+            LambdaQueryWrapper<GdufeLibraryEbookDO> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.select(GdufeLibraryEbookDO::getBookName, 
+                              GdufeLibraryEbookDO::getBookIsbn,
+                              GdufeLibraryEbookDO::getBookAuthor,
+                              GdufeLibraryEbookDO::getBookPress,
+                              GdufeLibraryEbookDO::getBookUrl,
+                              GdufeLibraryEbookDO::getBookPictureUrl,
+                              GdufeLibraryEbookDO::getBookBriefIntroduction)
+                       .eq(GdufeLibraryEbookDO::getBookPrimaryClassification, category)
+                       .eq(GdufeLibraryEbookDO::getIsDeleted, 0);
+            
+            // 执行分页查询
+            IPage<GdufeLibraryEbookDO> pageResult = gdufeLibraryEbookMapper.selectPage(pageParam, queryWrapper);
+            
+            // 构建返回数据
+            List<Map<String, Object>> bookList = new ArrayList<>();
+            for (GdufeLibraryEbookDO book : pageResult.getRecords()) {
+                Map<String, Object> bookInfo = new HashMap<>();
+                bookInfo.put("bookName", book.getBookName());
+                bookInfo.put("bookIsbn", book.getBookIsbn());
+                bookInfo.put("bookAuthor", book.getBookAuthor());
+                bookInfo.put("bookPress", book.getBookPress());
+                bookInfo.put("bookUrl", book.getBookUrl());
+                bookInfo.put("bookPictureUrl", book.getBookPictureUrl());
+                bookInfo.put("bookBriefIntroduction", book.getBookBriefIntroduction()); // 简介
+                bookList.add(bookInfo);
+            }
+            
+            // 构建返回结果
+            result.put("code", 200);
+            result.put("message", "查询成功");
+            
+            // 分页信息
+            Map<String, Object> pageInfo = new HashMap<>();
+            pageInfo.put("current", pageResult.getCurrent());        // 当前页
+            pageInfo.put("size", pageResult.getSize());              // 每页大小
+            pageInfo.put("total", pageResult.getTotal());            // 总记录数
+            pageInfo.put("pages", pageResult.getPages());            // 总页数
+            pageInfo.put("hasNext", pageResult.getCurrent() < pageResult.getPages());           // 是否有下一页
+            pageInfo.put("hasPrevious", pageResult.getCurrent() > 1);   // 是否有上一页
+            
+            // 数据信息
+            Map<String, Object> data = new HashMap<>();
+            data.put("list", bookList);                              // 数据列表
+            data.put("pageInfo", pageInfo);                          // 分页信息
+            
+            result.put("data", data);
+            
+        } catch (Exception e) {
+            result.put("code", 500);
+            result.put("message", "查询失败：" + e.getMessage());
+            result.put("data", null);
+        }
+        
+        return result;
+    }
 }

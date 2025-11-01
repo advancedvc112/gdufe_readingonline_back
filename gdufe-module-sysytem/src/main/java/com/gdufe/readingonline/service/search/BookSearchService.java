@@ -35,4 +35,14 @@ public interface BookSearchService {
      * @return 图书详细信息
      */
     Map<String, Object> getBookByIsbnAndSource(String isbn, Integer source);
+    
+    /**
+     * 按分类查询图书
+     * 
+     * @param category 图书主分类（0-22）
+     * @param page 页码（从1开始）
+     * @param size 每页大小
+     * @return 该分类的图书列表，包含分页信息
+     */
+    Map<String, Object> searchBooksByCategory(Integer category, Integer page, Integer size);
 }

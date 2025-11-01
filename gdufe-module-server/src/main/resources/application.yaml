@@ -15,16 +15,3 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/gdufe_readingonline?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
     username: root
     password: root
-  servlet:
-    multipart:
-      max-file-size: 200MB          # 单个文件最大大小
-      max-request-size: 200MB       # 整个请求最大大小
-      enabled: true                 # 启用文件上传
-      file-size-threshold: 0        # 设置为0，所有文件保存在内存中，不写入临时文件
-      # 不设置location，避免创建临时文件
-
-mybatis-plus:
-  type-aliases-package: com.gdufe.readingonline.dal.dataobject # 别名扫描包
-logging:
-  level:
-    com.gdufe.readingonline: debug

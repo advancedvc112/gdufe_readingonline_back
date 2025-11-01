@@ -528,6 +528,88 @@ public class ExcelParseServiceImpl implements ExcelParseService {
     }
     
     /**
+     * 将分类名称转换为INT值
+     * 映射关系：0-空白, 1-社会科学, 2-小说, 3-教材教辅, 4-科学新知, 5-文学, 6-经济管理, 7-少儿, 8-进口原版, 9-计算机, 10-生活休闲, 11-成功励志, 12-历史考古, 13-艺术摄影, 14-外语学习, 15-政治军事, 16-人物传记, 17-家教育儿, 18-中外名著, 19-漫画杂志, 20-职场进阶, 21-互联网+, 22-影视原著
+     * 
+     * @param categoryStr 分类名称或数字字符串
+     * @return 对应的INT值，如果无法匹配或为空则返回0（空白）
+     */
+    private Integer convertCategoryToInteger(String categoryStr) {
+        if (categoryStr == null || categoryStr.trim().isEmpty()) {
+            logger.debug("分类为空，返回0（空白）");
+            return 0; // 空白
+        }
+        
+        String trimmed = categoryStr.trim();
+        
+        // 如果是数字字符串，直接转换
+        try {
+            int numericValue = Integer.parseInt(trimmed);
+            // 验证范围在0-22之间
+            if (numericValue >= 0 && numericValue <= 22) {
+                logger.debug("分类为数字：{}，直接返回", numericValue);
+                return numericValue;
+            }
+        } catch (NumberFormatException e) {
+            // 不是数字，继续按名称匹配
+        }
+        
+        // 按分类名称匹配
+        switch (trimmed) {
+            case "空白":
+                return 0;
+            case "社会科学":
+                return 1;
+            case "小说":
+                return 2;
+            case "教材教辅":
+                return 3;
+            case "科学新知":
+                return 4;
+            case "文学":
+                return 5;
+            case "经济管理":
+                return 6;
+            case "少儿":
+                return 7;
+            case "进口原版":
+                return 8;
+            case "计算机":
+                return 9;
+            case "生活休闲":
+                return 10;
+            case "成功励志":
+                return 11;
+            case "历史考古":
+                return 12;
+            case "艺术摄影":
+                return 13;
+            case "外语学习":
+                return 14;
+            case "政治军事":
+                return 15;
+            case "人物传记":
+                return 16;
+            case "家教育儿":
+                return 17;
+            case "中外名著":
+                return 18;
+            case "漫画杂志":
+                return 19;
+            case "职场进阶":
+                return 20;
+            case "互联网+":
+                return 21;
+            case "影视原著":
+                return 22;
+            default:
+                // 无法匹配，返回0（空白）
+                logger.warn("无法识别的分类名称：{}，将设置为0（空白）", trimmed);
+                return 0;
+        }
+    }
+    
+    /**
      * 获取单元格数值
      */
     private double getCellNumericValue(Cell cell) {
@@ -945,7 +1027,12 @@ public class ExcelParseServiceImpl implements ExcelParseService {
             if (primaryCategoryIndex != null) {
                 Cell primaryCategoryCell = row.getCell(primaryCategoryIndex);
                 if (primaryCategoryCell != null) {
-                    ebook.setBookPrimaryClassification(getCellStringValue(primaryCategoryCell).trim());
+                    String categoryStr = getCellStringValue(primaryCategoryCell);
+                    if (categoryStr != null && !categoryStr.trim().isEmpty()) {
+                        Integer categoryInt = convertCategoryToInteger(categoryStr);
+                        ebook.setBookPrimaryClassification(categoryInt);
+                        logger.debug("一级分类转换：{} -> {}", categoryStr, categoryInt);
+                    }
                 }
             }
             
